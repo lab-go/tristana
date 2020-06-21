@@ -25,4 +25,6 @@ type MethodDesc struct {
 	Handler    MethodHandler
 }
 
-type MethodHandler func(ctx context.Context, svr interface{}, req []byte) ([]byte, error)
+type MethodHandler func(ctx context.Context, svr interface{}, req []byte, decodeFunc Decode) (interface{}, error)
+
+type Decode func(in []byte, out interface{}) error

@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/lab-go/tristana/pkg/server/codec"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -54,12 +56,18 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if handler := svc.GetHandler(split[2]); handler == nil {
 			w.Write([]byte("NO METHOD FOUND"))
 		} else {
-			res, err := handler(context.Background(), svc.ServiceType, body)
+			res, err := handler(context.Background(), svc.ServiceType, body, codec.JsonDecode)
 
 			if err != nil {
 				w.Write([]byte(err.Error()))
 			} else {
-				w.Write(res)
+				marshal, err := json.Marshal(res)
+
+				if err != nil {
+					w.Write([]byte(err.Error()))
+				}
+
+				w.Write(marshal)
 			}
 		}
 	}
