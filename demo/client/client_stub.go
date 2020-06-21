@@ -1,7 +1,7 @@
-package client
+package main
 
 import (
-	"github.com/lab-go/tristana/pkg/share"
+	"github.com/lab-go/tristana/demo/share"
 	"io/ioutil"
 	"net/http"
 	"strings"

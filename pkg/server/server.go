@@ -1,30 +1,66 @@
 package server
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
+	"strings"
+	"sync"
 )
 
-type Server struct {
+type server struct {
+	sMux       sync.RWMutex
+	svcMapping map[string]*ServiceDesc
 }
 
-func (s *Server) Start() {
-	http.HandleFunc("/", ServeHTTP)
-	http.ListenAndServe(":8080", nil)
+func NewServer() *server {
+	return &server{
+		sMux:       sync.RWMutex{},
+		svcMapping: map[string]*ServiceDesc{},
+	}
 }
 
-func ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var res string
+func (s *server) RegisterService(svc *ServiceDesc, svr interface{}) {
+	s.sMux.Lock()
+	svc.ServiceType = svr
+	s.svcMapping[svc.ServiceName] = svc
+	s.sMux.Unlock()
+}
+
+func (s *server) getService(svcName string) *ServiceDesc {
+	s.sMux.RLock()
+	defer s.sMux.RUnlock()
+	return s.svcMapping[svcName]
+}
+
+func (s *server) Start() {
+	http.ListenAndServe("0.0.0.0:8080", s)
+}
+
+func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
 
 	path := r.URL.Path
 
-	switch path {
-	case "/HelloService/Hello":
-		res = HelloImpl{}.Hello(string(body))
-	default:
-		res = "not found"
+	split := strings.Split(path, "/")
+
+	if len(split) != 3 {
+		w.Write([]byte("PATH NOT SUPPORT"))
 	}
 
-	w.Write([]byte(res))
+	if svc := s.getService(split[1]); svc == nil {
+		w.Write([]byte("NO SERVICE FOUND"))
+	} else {
+		if handler := svc.GetHandler(split[2]); handler == nil {
+			w.Write([]byte("NO METHOD FOUND"))
+		} else {
+			res, err := handler(context.Background(), svc.ServiceType, body)
+
+			if err != nil {
+				w.Write([]byte(err.Error()))
+			} else {
+				w.Write(res)
+			}
+		}
+	}
 }

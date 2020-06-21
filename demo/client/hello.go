@@ -1,10 +1,9 @@
-package client
+package main
 
 import (
 	"fmt"
-	"testing"
 )
 
-func TestHelloStub_Hello(t *testing.T) {
+func main() {
 	fmt.Println(NewHelloService().Hello("world"))
 }
